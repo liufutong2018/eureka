@@ -89,9 +89,9 @@ public class InstanceInfo {
     public static final int DEFAULT_COUNTRY_ID = 1; // US
 
     // The (fixed) instanceId for this instanceInfo. This should be unique within the scope of the appName.
-    private volatile String instanceId;
+    private volatile String instanceId; //id
 
-    private volatile String appName;
+    private volatile String appName; //微服务名称
     @Auto
     private volatile String appGroupName;
 
@@ -136,8 +136,13 @@ public class InstanceInfo {
     private volatile boolean isUnsecurePortEnabled = true;
     private volatile DataCenterInfo dataCenterInfo;
     private volatile String hostName;
-    private volatile InstanceStatus status = InstanceStatus.UP;
-    private volatile InstanceStatus overriddenStatus = InstanceStatus.UNKNOWN;
+
+    //记录当前Client在Server端的状态 ；服务端注册表里，如果为UP，其他服务能发现
+    private volatile InstanceStatus status = InstanceStatus.UP; 
+
+    // overriddenStatus 的初始值为UNKNOWN；用于计算Client在Server端的status状态，注册和续约的时候要重新计算
+    private volatile InstanceStatus overriddenStatus = InstanceStatus.UNKNOWN; 
+
     @XStreamOmitField
     private volatile boolean isInstanceInfoDirty = false;
     private volatile LeaseInfo leaseInfo;
@@ -145,10 +150,10 @@ public class InstanceInfo {
     private volatile Boolean isCoordinatingDiscoveryServer = Boolean.FALSE;
     @XStreamAlias("metadata")
     private volatile Map<String, String> metadata;
-    @Auto // 记录当前InstanceInfo在Server端被修改的时间戳
-    private volatile Long lastUpdatedTimestamp;
-    @Auto
-    private volatile Long lastDirtyTimestamp;
+    @Auto 
+    private volatile Long lastUpdatedTimestamp; //记录当前InstanceInfo在Server端被修改的时间戳
+    @Auto 
+    private volatile Long lastDirtyTimestamp; //记录当前InstanceInfo在Client端被修改的时间戳
     @Auto
     private volatile ActionType actionType;
     @Auto
@@ -315,12 +320,11 @@ public class InstanceInfo {
 
 
     public enum InstanceStatus {
-        UP, // Ready to receive traffic
-        DOWN, // Do not send traffic- healthcheck callback failed
-        STARTING, // Just about starting- initializations to be done - do not
-        // send traffic
-        OUT_OF_SERVICE, // Intentionally shutdown for traffic
-        UNKNOWN;
+        UP, // 可以对外提供服务了 Ready to receive traffic
+        DOWN, // 不能被发现，系统内部出问题，心跳出问题 Do not send traffic- healthcheck callback failed
+        STARTING, // 启动的一个过程 Just about starting- initializations to be done - do not send traffic
+        OUT_OF_SERVICE, // 不能被发现，人为的关闭 Intentionally shutdown for traffic
+        UNKNOWN; // 
 
         public static InstanceStatus toEnum(String s) {
             if (s != null) {
@@ -341,7 +345,7 @@ public class InstanceInfo {
         return (id == null) ? 31 : (id.hashCode() + 31);
     }
 
-    @Override
+    @Override // 重写了equals(), 只要两个InstanceInfo的instanceId相同，那么这两个InstanceInfo就相同
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
@@ -353,12 +357,13 @@ public class InstanceInfo {
             return false;
         }
         InstanceInfo other = (InstanceInfo) obj;
+        // 获取 instanceId
         String id = getId();
         if (id == null) {
             if (other.getId() != null) {
                 return false;
             }
-        } else if (!id.equals(other.getId())) {
+        } else if (!id.equals(other.getId())) { // 比较两个instanceId
             return false;
         }
         return true;

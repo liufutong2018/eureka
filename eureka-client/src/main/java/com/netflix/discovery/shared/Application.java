@@ -45,7 +45,7 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * The application class holds the list of instances for a particular
- * application.
+ * application.  一个Application实例中保存着一个特定微服务的所有提供者实例。
  *
  * @author Karthik Ranganathan
  *
@@ -64,17 +64,17 @@ public class Application {
                 + shuffledInstances + ", instancesMap=" + instancesMap + "]";
     }
 
-    private String name;
+    private String name; // 微服务名称
 
     @XStreamOmitField
     private volatile boolean isDirty = false;
 
-    @XStreamImplicit
-    private final Set<InstanceInfo> instances;
+    @XStreamImplicit // 保存着当前name所指定的微服务名称的所有InstanceInfo
+    private final Set<InstanceInfo> instances; 
 
     private final AtomicReference<List<InstanceInfo>> shuffledInstances;
 
-    private final Map<String, InstanceInfo> instancesMap;
+    private final Map<String, InstanceInfo> instancesMap; //key为instanceId，value为InstanceInfo
 
     public Application() {
         instances = new LinkedHashSet<InstanceInfo>();
@@ -98,7 +98,7 @@ public class Application {
     }
 
     /**
-     * Add the given instance info the list.
+     * Add the given instance info the list. 将给定的实例信息添加到列表中。
      *
      * @param i
      *            the instance info object to be added.
@@ -106,9 +106,9 @@ public class Application {
     public void addInstance(InstanceInfo i) {
         instancesMap.put(i.getId(), i);
         synchronized (instances) {
-            instances.remove(i);
-            instances.add(i);
-            isDirty = true;
+            instances.remove(i); //删掉老的
+            instances.add(i); //加入新的
+            isDirty = true; //现在发生变化了，但还没同步到服务端，所以是脏的
         }
     }
 

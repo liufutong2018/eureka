@@ -47,14 +47,14 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
     public EurekaHttpResponse<Void> register(InstanceInfo info) {
         String urlPath = "apps/" + info.getAppName();
         ClientResponse response = null;
-        try {
+        try { // 注册请求
             Builder resourceBuilder = jerseyClient.resource(serviceUrl).path(urlPath).getRequestBuilder();
             addExtraHeaders(resourceBuilder);
             response = resourceBuilder
-                    .header("Accept-Encoding", "gzip")
+                    .header("Accept-Encoding", "gzip") //是否压缩
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .accept(MediaType.APPLICATION_JSON)
-                    .post(ClientResponse.class, info);
+                    .post(ClientResponse.class, info); //提交post请求
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {
@@ -86,21 +86,21 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         }
     }
 
-    @Override
+    @Override //定时续约
     public EurekaHttpResponse<InstanceInfo> sendHeartBeat(String appName, String id, InstanceInfo info, InstanceStatus overriddenStatus) {
         String urlPath = "apps/" + appName + '/' + id;
         ClientResponse response = null;
         try {
             WebResource webResource = jerseyClient.resource(serviceUrl)
                     .path(urlPath)
-                    .queryParam("status", info.getStatus().toString())
-                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
+                    .queryParam("status", info.getStatus().toString()) //当前状态
+                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString()); //当前InstanceInfo在client端被修改的时间
             if (overriddenStatus != null) {
-                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name());
+                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name()); //续约、注册时，。。。用于计算status
             }
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);
-            response = requestBuilder.put(ClientResponse.class);
+            response = requestBuilder.put(ClientResponse.class); //提交put请求，进行续约
             EurekaHttpResponseBuilder<InstanceInfo> eurekaResponseBuilder = anEurekaHttpResponse(response.getStatus(), InstanceInfo.class).headers(headersOf(response));
             if (response.hasEntity() &&
                     !HTML.equals(response.getType().getSubtype())) { //don't try and deserialize random html errors from the server
@@ -164,12 +164,12 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
 
     @Override
     public EurekaHttpResponse<Applications> getApplications(String... regions) {
-        return getApplicationsInternal("apps/", regions);
+        return getApplicationsInternal("apps/", regions); // 从eureka服务器【全量】获取 Applications 注册表
     }
 
     @Override
     public EurekaHttpResponse<Applications> getDelta(String... regions) {
-        return getApplicationsInternal("apps/delta", regions);
+        return getApplicationsInternal("apps/delta", regions); // 从eureka服务器【增量】获取 Applications 注册表
     }
 
     @Override
@@ -186,20 +186,21 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         ClientResponse response = null;
         String regionsParamValue = null;
         try {
-            WebResource webResource = jerseyClient.resource(serviceUrl).path(urlPath);
-            if (regions != null && regions.length > 0) {
+            WebResource webResource = jerseyClient.resource(serviceUrl).path(urlPath); //获得一个jersey处理器
+            if (regions != null && regions.length > 0) { //配置的远程regions
                 regionsParamValue = StringUtil.join(regions);
-                webResource = webResource.queryParam("regions", regionsParamValue);
+                webResource = webResource.queryParam("regions", regionsParamValue); //增加一个参数
             }
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);
+            //提交get请求，获取注册表
             response = requestBuilder.accept(MediaType.APPLICATION_JSON_TYPE).get(ClientResponse.class);
 
             Applications applications = null;
             if (response.getStatus() == Status.OK.getStatusCode() && response.hasEntity()) {
-                applications = response.getEntity(Applications.class);
+                applications = response.getEntity(Applications.class); //获取到响应体
             }
-            return anEurekaHttpResponse(response.getStatus(), Applications.class)
+            return anEurekaHttpResponse(response.getStatus(), Applications.class) //返回注册表
                     .headers(headersOf(response))
                     .entity(applications)
                     .build();

@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A <em>jersey</em> resource that handles operations for a particular instance.
- *
+ * 一个jersey资源，处理特定实例的操作。类似于一个SpringMVC里的 Controller处理器
  * @author Karthik Ranganathan, Greg Kim
  *
  */

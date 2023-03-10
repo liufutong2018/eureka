@@ -63,18 +63,18 @@ public class TimedSupervisorTask extends TimerTask {
     public void run() {
         Future<?> future = null;
         try {
-            future = executor.submit(task);
+            future = executor.submit(task); //异步执行
             threadPoolLevelGauge.set((long) executor.getActiveCount());
-            future.get(timeoutMillis, TimeUnit.MILLISECONDS);  // block until done or timeout
-            delay.set(timeoutMillis);
+            future.get(timeoutMillis, TimeUnit.MILLISECONDS); // 阻塞直到完成或超时； block until done or timeout
+            delay.set(timeoutMillis); //
             threadPoolLevelGauge.set((long) executor.getActiveCount());
             successCounter.increment();
-        } catch (TimeoutException e) {
+        } catch (TimeoutException e) { //超时失败
             logger.warn("task supervisor timed out", e);
             timeoutCounter.increment();
 
             long currentDelay = delay.get();
-            long newDelay = Math.min(maxDelay, currentDelay * 2);
+            long newDelay = Math.min(maxDelay, currentDelay * 2); //时间*2
             delay.compareAndSet(currentDelay, newDelay);
 
         } catch (RejectedExecutionException e) {
@@ -95,11 +95,11 @@ public class TimedSupervisorTask extends TimerTask {
             throwableCounter.increment();
         } finally {
             if (future != null) {
-                future.cancel(true);
+                future.cancel(true); //取消异步操作
             }
 
             if (!scheduler.isShutdown()) {
-                scheduler.schedule(this, delay.get(), TimeUnit.MILLISECONDS);
+                scheduler.schedule(this, delay.get(), TimeUnit.MILLISECONDS); //多次执行
             }
         }
     }
