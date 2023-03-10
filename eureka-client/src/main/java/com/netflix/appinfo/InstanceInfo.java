@@ -145,7 +145,7 @@ public class InstanceInfo {
     private volatile Boolean isCoordinatingDiscoveryServer = Boolean.FALSE;
     @XStreamAlias("metadata")
     private volatile Map<String, String> metadata;
-    @Auto
+    @Auto // 记录当前InstanceInfo在Server端被修改的时间戳
     private volatile Long lastUpdatedTimestamp;
     @Auto
     private volatile Long lastDirtyTimestamp;
