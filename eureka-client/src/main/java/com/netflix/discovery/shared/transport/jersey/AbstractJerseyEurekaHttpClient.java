@@ -117,7 +117,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         }
     }
 
-    @Override //下线请求，提交的状态为CANCEL_OVERRIDE
+    @Override //状态修改（server间复制）；下线请求，提交的状态为CANCEL_OVERRIDE
     public EurekaHttpResponse<Void> statusUpdate(String appName, String id, InstanceStatus newStatus, InstanceInfo info) {
         String urlPath = "apps/" + appName + '/' + id + "/status";
         ClientResponse response = null;

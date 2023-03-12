@@ -88,7 +88,7 @@ public class InstanceResource {
     }
 
     /**
-     * A put request for renewing lease from a client instance.
+     * A put request for renewing lease from a client instance. 续约
      *
      * @param isReplication
      *            a header parameter containing information whether this is
@@ -109,24 +109,24 @@ public class InstanceResource {
             @QueryParam("status") String status,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         boolean isFromReplicaNode = "true".equals(isReplication);
-        boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode);
+        boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode); //续约
 
-        // Not found in the registry, immediately ask for a register
+        // Not found in the registry, immediately ask for a register；续约失败；客户端第一次先续约404再注册
         if (!isSuccess) {
             logger.warn("Not Found (Renew): {} - {}", app.getName(), id);
-            return Response.status(Status.NOT_FOUND).build();
+            return Response.status(Status.NOT_FOUND).build(); //续约失败返回404
         }
         // Check if we need to sync based on dirty time stamp, the client
-        // instance might have changed some value
+        // instance might have changed some value；检查我们是否需要基于脏时间戳同步，客户端instance可能改变了一些值
         Response response;
-        if (lastDirtyTimestamp != null && serverConfig.shouldSyncWhenTimestampDiffers()) {
-            response = this.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode);
+        if (lastDirtyTimestamp != null && serverConfig.shouldSyncWhenTimestampDiffers()) { //server间数据的同步
+            response = this.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode); //验证时间
             // Store the overridden status since the validation found out the node that replicates wins
             if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()
                     && (overriddenStatus != null)
                     && !(InstanceStatus.UNKNOWN.name().equals(overriddenStatus))
                     && isFromReplicaNode) {
-                registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus));
+                registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus)); //续约
             }
         } else {
             response = Response.ok().build();
@@ -185,7 +185,7 @@ public class InstanceResource {
     }
 
     /**
-     * Removes status override for an instance, set with
+     * Removes status override for an instance, set with；客户端提交了CANCEL_OVERRIDE状态请求，服务端在此处理
      * {@link #statusUpdate(String, String, String)}.
      *
      * @param isReplication
@@ -200,16 +200,16 @@ public class InstanceResource {
     @Path("status")
     public Response deleteStatusUpdate(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication,
-            @QueryParam("value") String newStatusValue,
+            @QueryParam("value") String newStatusValue, //新的状态 null
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         try {
-            if (registry.getInstanceByAppAndId(app.getName(), id) == null) {
+            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //现在注册表里找
                 logger.warn("Instance not found: {}/{}", app.getName(), id);
                 return Response.status(Status.NOT_FOUND).build();
             }
 
             InstanceStatus newStatus = newStatusValue == null ? InstanceStatus.UNKNOWN : InstanceStatus.valueOf(newStatusValue);
-            boolean isSuccess = registry.deleteStatusOverride(app.getName(), id,
+            boolean isSuccess = registry.deleteStatusOverride(app.getName(), id, //进行删除 PeerAwareInstanceRegistryImpl.deleteStatusOverride()
                     newStatus, lastDirtyTimestamp, "true".equals(isReplication));
 
             if (isSuccess) {
@@ -299,26 +299,26 @@ public class InstanceResource {
                                             boolean isReplication) {
         InstanceInfo appInfo = registry.getInstanceByAppAndId(app.getName(), id, false);
         if (appInfo != null) {
-            if ((lastDirtyTimestamp != null) && (!lastDirtyTimestamp.equals(appInfo.getLastDirtyTimestamp()))) {
+            if ((lastDirtyTimestamp != null) && (!lastDirtyTimestamp.equals(appInfo.getLastDirtyTimestamp()))) { //两个server间时间不一样
                 Object[] args = {id, appInfo.getLastDirtyTimestamp(), lastDirtyTimestamp, isReplication};
 
-                if (lastDirtyTimestamp > appInfo.getLastDirtyTimestamp()) {
+                if (lastDirtyTimestamp > appInfo.getLastDirtyTimestamp()) { //外来的新
                     logger.debug(
                             "Time to sync, since the last dirty timestamp differs -"
                                     + " ReplicationInstance id : {},Registry : {} Incoming: {} Replication: {}",
                             args);
-                    return Response.status(Status.NOT_FOUND).build();
-                } else if (appInfo.getLastDirtyTimestamp() > lastDirtyTimestamp) {
+                    return Response.status(Status.NOT_FOUND).build(); //NOT_FOUND
+                } else if (appInfo.getLastDirtyTimestamp() > lastDirtyTimestamp) { //我的比外来的还新
                     // In the case of replication, send the current instance info in the registry for the
                     // replicating node to sync itself with this one.
-                    if (isReplication) {
+                    if (isReplication) { //是复制
                         logger.debug(
                                 "Time to sync, since the last dirty timestamp differs -"
                                         + " ReplicationInstance id : {},Registry : {} Incoming: {} Replication: {}",
                                 args);
-                        return Response.status(Status.CONFLICT).entity(appInfo).build();
+                        return Response.status(Status.CONFLICT).entity(appInfo).build(); //数据冲突（正常不出现）
                     } else {
-                        return Response.ok().build();
+                        return Response.ok().build(); //不是复制
                     }
                 }
             }

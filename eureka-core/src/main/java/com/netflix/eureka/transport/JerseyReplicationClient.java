@@ -56,7 +56,7 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
 
     /**
      * Compared to regular heartbeat, in the replication channel the server may return a more up to date
-     * instance copy.
+     * instance copy. 续约
      */
     @Override
     public EurekaHttpResponse<InstanceInfo> sendHeartBeat(String appName, String id, InstanceInfo info, InstanceStatus overriddenStatus) {
@@ -68,7 +68,7 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
                     .queryParam("status", info.getStatus().toString())
                     .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
             if (overriddenStatus != null) {
-                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name());
+                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name()); //最新计算的状态
             }
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);

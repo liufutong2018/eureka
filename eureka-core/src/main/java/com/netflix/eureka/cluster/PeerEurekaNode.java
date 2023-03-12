@@ -202,7 +202,7 @@ public class PeerEurekaNode {
         ReplicationTask replicationTask = new InstanceReplicationTask(targetHost, Action.Heartbeat, info, overriddenStatus, false) {
             @Override
             public EurekaHttpResponse<InstanceInfo> execute() throws Throwable {
-                return replicationClient.sendHeartBeat(appName, id, info, overriddenStatus);
+                return replicationClient.sendHeartBeat(appName, id, info, overriddenStatus); //续约
             }
 
             @Override
@@ -255,7 +255,7 @@ public class PeerEurekaNode {
 
     /**
      *
-     * Send the status update of the instance.
+     * Send the status update of the instance. 发送实例的状态更新。
      *
      * @param appName
      *            the application name of the instance.
@@ -274,10 +274,10 @@ public class PeerEurekaNode {
                 new InstanceReplicationTask(targetHost, Action.StatusUpdate, info, null, false) {
                     @Override
                     public EurekaHttpResponse<Void> execute() {
-                        return replicationClient.statusUpdate(appName, id, newStatus, info);
+                        return replicationClient.statusUpdate(appName, id, newStatus, info); // AbstractJerseyEurekaHttpClient.statusUpdate()，server间的复制
                     }
-                },
-                expiryTime
+                },//这个任务必须在过期时间之前完成
+                expiryTime //过期时间
         );
     }
 

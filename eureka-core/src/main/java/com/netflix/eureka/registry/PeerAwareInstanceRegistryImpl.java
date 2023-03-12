@@ -394,7 +394,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     /**
      * Registers the information about the {@link InstanceInfo} and replicates
      * this information to all peer eureka nodes. If this is replication event
-     * from other replica nodes then it is not replicated.
+     * from other replica nodes then it is not replicated. 注册
      *
      * @param info
      *            the {@link InstanceInfo} to be registered and replicated.
@@ -408,18 +408,18 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
-        super.register(info, leaseDuration, isReplication);
-        replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication);
+        super.register(info, leaseDuration, isReplication); //注册
+        replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication); //server间的复制
     }
 
     /*
-     * (non-Javadoc)
+     * (non-Javadoc) 续约
      *
      * @see com.netflix.eureka.registry.InstanceRegistry#renew(java.lang.String,
      * java.lang.String, long, boolean)
      */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
-        if (super.renew(appName, id, isReplication)) {
+        if (super.renew(appName, id, isReplication)) { //续约 AbstractInstanceRegistry.renew()
             replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
             return true;
         }
@@ -438,7 +438,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                                 final InstanceStatus newStatus, String lastDirtyTimestamp,
                                 final boolean isReplication) {
         if (super.statusUpdate(appName, id, newStatus, lastDirtyTimestamp, isReplication)) {
-            replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication);
+            replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制
             return true;
         }
         return false;
@@ -449,8 +449,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                                         InstanceStatus newStatus,
                                         String lastDirtyTimestamp,
                                         boolean isReplication) {
-        if (super.deleteStatusOverride(appName, id, newStatus, lastDirtyTimestamp, isReplication)) {
-            replicateToPeers(Action.DeleteStatusOverride, appName, id, null, null, isReplication);
+        if (super.deleteStatusOverride(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //删除 AbstractInstanceRegistry.deleteStatusOverride()
+            replicateToPeers(Action.DeleteStatusOverride, appName, id, null, null, isReplication); //做同步 删除
             return true;
         }
         return false;
@@ -624,17 +624,17 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     /**
      * Replicates all eureka actions to peer eureka nodes except for replication
      * traffic to this node.
-     *
+     * 将所有eureka操作复制到对端eureka节点(复制除外)到该节点的流量。
      */
     private void replicateToPeers(Action action, String appName, String id,
                                   InstanceInfo info /* optional */,
                                   InstanceStatus newStatus /* optional */, boolean isReplication) {
         Stopwatch tracer = action.getTimer().start();
         try {
-            if (isReplication) {
+            if (isReplication) { //客户端发来的不是复制
                 numberOfReplicationsLastMin.increment();
             }
-            // If it is a replication already, do not replicate again as this will create a poison replication
+            // If it is a replication already, do not replicate again as this will create a poison replication；如果已经是复制，则不要再次复制
             if (peerEurekaNodes == Collections.EMPTY_LIST || isReplication) {
                 return;
             }
@@ -642,9 +642,9 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             for (final PeerEurekaNode node : peerEurekaNodes.getPeerEurekaNodes()) {
                 // If the url represents this host, do not replicate to yourself.
                 if (peerEurekaNodes.isThisMyUrl(node.getServiceUrl())) {
-                    continue;
+                    continue; //遍历所有Eureka，如果是自己就跳过
                 }
-                replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node);
+                replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); // 
             }
         } finally {
             tracer.stop();
@@ -663,22 +663,22 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             InstanceInfo infoFromRegistry;
             CurrentRequestVersion.set(Version.V2);
             switch (action) {
-                case Cancel:
+                case Cancel: //取消
                     node.cancel(appName, id);
                     break;
-                case Heartbeat:
+                case Heartbeat: //续约
                     InstanceStatus overriddenStatus = overriddenInstanceStatusMap.get(id);
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
-                    node.heartbeat(appName, id, infoFromRegistry, overriddenStatus, false);
+                    node.heartbeat(appName, id, infoFromRegistry, overriddenStatus, false); //
                     break;
-                case Register:
+                case Register: //注册
                     node.register(info);
                     break;
-                case StatusUpdate:
+                case StatusUpdate: //修改状态
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
-                    node.statusUpdate(appName, id, newStatus, infoFromRegistry);
+                    node.statusUpdate(appName, id, newStatus, infoFromRegistry); //PeerEurekaNode.statusUpdate()
                     break;
-                case DeleteStatusOverride:
+                case DeleteStatusOverride: //下线
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.deleteStatusOverride(appName, id, infoFromRegistry);
                     break;
