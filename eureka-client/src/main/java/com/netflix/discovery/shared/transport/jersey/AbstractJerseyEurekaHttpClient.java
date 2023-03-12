@@ -67,14 +67,14 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         }
     }
 
-    @Override
+    @Override //服务下架
     public EurekaHttpResponse<Void> cancel(String appName, String id) {
         String urlPath = "apps/" + appName + '/' + id;
         ClientResponse response = null;
         try {
             Builder resourceBuilder = jerseyClient.resource(serviceUrl).path(urlPath).getRequestBuilder();
             addExtraHeaders(resourceBuilder);
-            response = resourceBuilder.delete(ClientResponse.class);
+            response = resourceBuilder.delete(ClientResponse.class); //delete请求
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {
@@ -117,18 +117,18 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         }
     }
 
-    @Override
+    @Override //下线请求，提交的状态为CANCEL_OVERRIDE
     public EurekaHttpResponse<Void> statusUpdate(String appName, String id, InstanceStatus newStatus, InstanceInfo info) {
         String urlPath = "apps/" + appName + '/' + id + "/status";
         ClientResponse response = null;
         try {
             Builder requestBuilder = jerseyClient.resource(serviceUrl)
                     .path(urlPath)
-                    .queryParam("value", newStatus.name())
-                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString())
+                    .queryParam("value", newStatus.name()) //携带的参数
+                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString()) //携带的参数
                     .getRequestBuilder();
             addExtraHeaders(requestBuilder);
-            response = requestBuilder.put(ClientResponse.class);
+            response = requestBuilder.put(ClientResponse.class); //put请求
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {
@@ -140,17 +140,17 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         }
     }
 
-    @Override
+    @Override //下线请求，提交的状态为CANCEL_OVERRIDE，不提供注册发现了，本身还在启动着
     public EurekaHttpResponse<Void> deleteStatusOverride(String appName, String id, InstanceInfo info) {
         String urlPath = "apps/" + appName + '/' + id + "/status";
         ClientResponse response = null;
         try {
             Builder requestBuilder = jerseyClient.resource(serviceUrl)
                     .path(urlPath)
-                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString())
+                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString()) //携带的参数
                     .getRequestBuilder();
             addExtraHeaders(requestBuilder);
-            response = requestBuilder.delete(ClientResponse.class);
+            response = requestBuilder.delete(ClientResponse.class); //delete请求
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {

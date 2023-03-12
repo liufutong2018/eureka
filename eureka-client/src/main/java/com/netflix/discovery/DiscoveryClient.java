@@ -928,26 +928,26 @@ public class DiscoveryClient implements EurekaClient {
 
     /**
      * Shuts down Eureka Client. Also sends a deregistration request to the
-     * eureka server.
+     * eureka server. 服务下架。
      */
     @PreDestroy
     @Override
     public synchronized void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
-            logger.info("Shutting down DiscoveryClient ...");
+            logger.info("Shutting down DiscoveryClient；关闭DiscoveryClient ...");
 
-            if (statusChangeListener != null && applicationInfoManager != null) {
+            if (statusChangeListener != null && applicationInfoManager != null) { //去掉监听器
                 applicationInfoManager.unregisterStatusChangeListener(statusChangeListener.getId());
             }
 
-            cancelScheduledTasks();
+            cancelScheduledTasks(); //取消定时任务
 
-            // If APPINFO was registered
+            // If APPINFO was registered 如果APPINFO已注册
             if (applicationInfoManager != null
                     && clientConfig.shouldRegisterWithEureka()
                     && clientConfig.shouldUnregisterOnShutdown()) {
                 applicationInfoManager.setInstanceStatus(InstanceStatus.DOWN);
-                unregister();
+                unregister(); //取消注册
             }
 
             if (eurekaTransport != null) {
@@ -959,18 +959,18 @@ public class DiscoveryClient implements EurekaClient {
 
             Monitors.unregisterObject(this);
 
-            logger.info("Completed shut down of DiscoveryClient");
+            logger.info("Completed shut down of DiscoveryClient；完成DiscoveryClient的关闭");
         }
     }
 
     /**
-     * unregister w/ the eureka service.
+     * unregister w/ the eureka service. 注销eureka服务。
      */
     void unregister() {
         // It can be null if shouldRegisterWithEureka == false
         if(eurekaTransport != null && eurekaTransport.registrationClient != null) {
             try {
-                logger.info("Unregistering ...");
+                logger.info("Unregistering ..."); //AbstractJerseyEurekaHttpClient.cancel() 
                 EurekaHttpResponse<Void> httpResponse = eurekaTransport.registrationClient.cancel(instanceInfo.getAppName(), instanceInfo.getId());
                 logger.info(PREFIX + "{} - deregister  status: {}", appPathIdentifier, httpResponse.getStatusCode());
             } catch (Exception e) {
@@ -1376,16 +1376,16 @@ public class DiscoveryClient implements EurekaClient {
 
     private void cancelScheduledTasks() {
         if (instanceInfoReplicator != null) {
-            instanceInfoReplicator.stop();
+            instanceInfoReplicator.stop(); //取消定时更新client信息给server
         }
         if (heartbeatExecutor != null) {
-            heartbeatExecutor.shutdownNow();
+            heartbeatExecutor.shutdownNow(); //取消心跳
         }
         if (cacheRefreshExecutor != null) {
-            cacheRefreshExecutor.shutdownNow();
+            cacheRefreshExecutor.shutdownNow(); //取消定时更新客户端注册表
         }
         if (scheduler != null) {
-            scheduler.shutdownNow();
+            scheduler.shutdownNow(); //取消定时器
         }
         if (cacheRefreshTask != null) {
             cacheRefreshTask.cancel();
