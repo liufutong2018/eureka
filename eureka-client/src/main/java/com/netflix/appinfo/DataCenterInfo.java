@@ -24,7 +24,7 @@ import com.netflix.discovery.converters.jackson.DataCenterTypeInfoResolver;
 
 /**
  * A simple interface for indicating which <em>datacenter</em> a particular instance belongs.
- *
+ * 用于指示特定实例属于哪个数据中心
  * @author Karthik Ranganathan
  *
  */

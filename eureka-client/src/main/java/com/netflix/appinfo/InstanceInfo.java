@@ -134,6 +134,8 @@ public class InstanceInfo {
     private volatile int countryId = DEFAULT_COUNTRY_ID; // Defaults to US
     private volatile boolean isSecurePortEnabled = false;
     private volatile boolean isUnsecurePortEnabled = true;
+
+    //数据中心信息
     private volatile DataCenterInfo dataCenterInfo;
     private volatile String hostName;
 
@@ -145,6 +147,8 @@ public class InstanceInfo {
 
     @XStreamOmitField
     private volatile boolean isInstanceInfoDirty = false;
+
+    //续约信息
     private volatile LeaseInfo leaseInfo;
     @Auto
     private volatile Boolean isCoordinatingDiscoveryServer = Boolean.FALSE;
@@ -1215,7 +1219,7 @@ public class InstanceInfo {
     }
 
     /**
-     * @return the lastDirtyTimestamp if is dirty, null otherwise.
+     * @return the lastDirtyTimestamp if is dirty, null otherwise.；如果lastDirtyTimestamp是脏的，否则为空。
      */
     public synchronized Long isDirtyWithTime() {
         if (isInstanceInfoDirty) {

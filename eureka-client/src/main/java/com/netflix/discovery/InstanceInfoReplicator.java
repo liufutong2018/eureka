@@ -52,19 +52,19 @@ class InstanceInfoReplicator implements Runnable {
         this.scheduledPeriodicRef = new AtomicReference<Future>();
 
         this.started = new AtomicBoolean(false);
-        this.rateLimiter = new RateLimiter(TimeUnit.MINUTES);
+        this.rateLimiter = new RateLimiter(TimeUnit.MINUTES); //令牌桶限流
         this.replicationIntervalSeconds = replicationIntervalSeconds;
         this.burstSize = burstSize;
 
-        this.allowedRatePerMinute = 60 * this.burstSize / this.replicationIntervalSeconds;
+        this.allowedRatePerMinute = 60 * this.burstSize / this.replicationIntervalSeconds; //
         logger.info("InstanceInfoReplicator onDemand update allowed rate per min is {}", allowedRatePerMinute);
     }
 
     public void start(int initialDelayMs) {
         if (started.compareAndSet(false, true)) {
-            instanceInfo.setIsDirty();  // for initial register
-            Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS);
-            scheduledPeriodicRef.set(next);
+            instanceInfo.setIsDirty();  // 设置为true脏的； for initial register 
+            Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务
+            scheduledPeriodicRef.set(next); //定时更新的时候，把此任务放进去
         }
     }
 
@@ -84,21 +84,21 @@ class InstanceInfoReplicator implements Runnable {
         }
     }
 
-    public boolean onDemandUpdate() {
-        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) {
-            if (!scheduler.isShutdown()) {
-                scheduler.submit(new Runnable() {
+    public boolean onDemandUpdate() { //配置文件发生变更时，按需更新client信息给server
+        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) { //令牌桶算法，限流器（杀鸡用牛刀，配置文件不会更新那么快）
+            if (!scheduler.isShutdown()) { //定时器没关
+                scheduler.submit(new Runnable() { //执行此run()
                     @Override
                     public void run() {
                         logger.debug("Executing on-demand update of local InstanceInfo");
     
                         Future latestPeriodic = scheduledPeriodicRef.get();
-                        if (latestPeriodic != null && !latestPeriodic.isDone()) {
+                        if (latestPeriodic != null && !latestPeriodic.isDone()) { //如果发生了按需更新，会把最近的定时更新取消掉 ，不会出现多条线
                             logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
-                            latestPeriodic.cancel(false);
+                            latestPeriodic.cancel(false); //取消执行
                         }
     
-                        InstanceInfoReplicator.this.run();
+                        InstanceInfoReplicator.this.run(); //执行下面的那个run()
                     }
                 });
                 return true;
@@ -114,17 +114,17 @@ class InstanceInfoReplicator implements Runnable {
 
     public void run() {
         try {
-            discoveryClient.refreshInstanceInfo();
+            discoveryClient.refreshInstanceInfo(); //更新instanceInfo信息
 
-            Long dirtyTimestamp = instanceInfo.isDirtyWithTime();
-            if (dirtyTimestamp != null) {
-                discoveryClient.register();
-                instanceInfo.unsetIsDirty(dirtyTimestamp);
+            Long dirtyTimestamp = instanceInfo.isDirtyWithTime(); //返回客户端修改的时间
+            if (dirtyTimestamp != null) { //客户端发生了修改
+                discoveryClient.register(); //提交注册请求给server
+                instanceInfo.unsetIsDirty(dirtyTimestamp);//取消设置为脏
             }
         } catch (Throwable t) {
             logger.warn("There was a problem with the instance info replicator", t);
         } finally {
-            Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS);
+            Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS); //执行多次
             scheduledPeriodicRef.set(next);
         }
     }

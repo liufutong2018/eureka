@@ -1343,15 +1343,15 @@ public class DiscoveryClient implements EurekaClient {
                     heartbeatTask,
                     renewalIntervalInSecs, TimeUnit.SECONDS);
 
-            // InstanceInfo replicator
+            //==================第三个定时任务：定时更新client信息给server（client端配置文件信息发生变化）
+            // InstanceInfo replicator（InstanceInfo复制者）
             instanceInfoReplicator = new InstanceInfoReplicator(
                     this,
                     instanceInfo,
-                    clientConfig.getInstanceInfoReplicationIntervalSeconds(),
-                    2); // burstSize
+                    clientConfig.getInstanceInfoReplicationIntervalSeconds(), //每30S检测一次配置文件有没有更新
+                    2); // burstSize 令牌桶限流算法
 
-            //==================第三个定时任务：定时更新client信息给server
-            statusChangeListener = new ApplicationInfoManager.StatusChangeListener() {
+            statusChangeListener = new ApplicationInfoManager.StatusChangeListener() { //状态变更监听器（配置文件发生变更）
                 @Override
                 public String getId() {
                     return "statusChangeListener";
@@ -1360,7 +1360,7 @@ public class DiscoveryClient implements EurekaClient {
                 @Override
                 public void notify(StatusChangeEvent statusChangeEvent) {
                     logger.info("Saw local status change event {}", statusChangeEvent);
-                    instanceInfoReplicator.onDemandUpdate();
+                    instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，按需更新client信息给server
                 }
             };
 
@@ -1368,7 +1368,7 @@ public class DiscoveryClient implements EurekaClient {
                 applicationInfoManager.registerStatusChangeListener(statusChangeListener);
             }
 
-            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds());
+            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds()); //启动定时任务更新client信息给server
         } else {
             logger.info("Not registering with Eureka server per configuration");
         }
@@ -1440,17 +1440,18 @@ public class DiscoveryClient implements EurekaClient {
     /**
      * Refresh the current local instanceInfo. Note that after a valid refresh where changes are observed, the
      * isDirty flag on the instanceInfo is set to true
+     * 刷新当前本地instanceInfo。在观察到更改的有效刷新之后，instanceInfo上的isDirty标志设置为true
      */
     void refreshInstanceInfo() {
-        applicationInfoManager.refreshDataCenterInfoIfRequired();
-        applicationInfoManager.refreshLeaseInfoIfRequired();
+        applicationInfoManager.refreshDataCenterInfoIfRequired(); //更新数据中心信息（一般不用）
+        applicationInfoManager.refreshLeaseInfoIfRequired(); //更新续约信息
 
         InstanceStatus status;
         try {
-            status = getHealthCheckHandler().getStatus(instanceInfo.getStatus());
+            status = getHealthCheckHandler().getStatus(instanceInfo.getStatus()); //获取到status
         } catch (Exception e) {
             logger.warn("Exception from healthcheckHandler.getStatus, setting status to DOWN", e);
-            status = InstanceStatus.DOWN;
+            status = InstanceStatus.DOWN; //发生异常状态变成DOWN
         }
 
         if (null != status) {
