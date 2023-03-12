@@ -163,7 +163,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     }
 
     /**
-     * Perform all cleanup and shutdown operations.
+     * Perform all cleanup and shutdown operations. 执行所有清理和关机操作。
      */
     @Override
     public void shutdown() {
@@ -427,7 +427,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     }
 
     /*
-     * (non-Javadoc)
+     * (non-Javadoc) 处理客户端状态请求
      *
      * @see com.netflix.eureka.registry.InstanceRegistry#statusUpdate(java.lang.String,
      * java.lang.String, com.netflix.appinfo.InstanceInfo.InstanceStatus,

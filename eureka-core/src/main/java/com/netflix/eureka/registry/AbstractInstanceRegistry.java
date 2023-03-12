@@ -77,8 +77,11 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AbstractInstanceRegistry.class);
 
     private static final String[] EMPTY_STR_ARRAY = new String[0];
+
+    //服务端注册表
     private final ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>> registry
             = new ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>>();
+
     protected Map<String, RemoteRegionRegistry> regionNameVSRemoteRegistry = new HashMap<String, RemoteRegionRegistry>();
     protected final ConcurrentMap<String, InstanceStatus> overriddenInstanceStatusMap = CacheBuilder
             .newBuilder().initialCapacity(500)
@@ -1022,25 +1025,25 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      * @param appName the application name for which the information is requested.
      * @param id the unique identifier of the instance.
      * @param includeRemoteRegions true, if we need to include applications from remote regions
-     *                             as indicated by the region {@link URL} by this property
+     *                             as indicated by the region {@link URL} by this property；是否包含远程region
      *                             {@link EurekaServerConfig#getRemoteRegionUrls()}, false otherwise
      * @return the information about the instance.
      */
     @Override
     public InstanceInfo getInstanceByAppAndId(String appName, String id, boolean includeRemoteRegions) {
-        Map<String, Lease<InstanceInfo>> leaseMap = registry.get(appName);
+        Map<String, Lease<InstanceInfo>> leaseMap = registry.get(appName); //registry：服务端注册表
         Lease<InstanceInfo> lease = null;
         if (leaseMap != null) {
-            lease = leaseMap.get(id);
+            lease = leaseMap.get(id); //lease:客户端
         }
         if (lease != null
-                && (!isLeaseExpirationEnabled() || !lease.isExpired())) {
-            return decorateInstanceInfo(lease);
-        } else if (includeRemoteRegions) {
+                && (!isLeaseExpirationEnabled() || !lease.isExpired())) {//没过期
+            return decorateInstanceInfo(lease); //包装成InstanceInfo
+        } else if (includeRemoteRegions) { //不能用，但包含远程Region
             for (RemoteRegionRegistry remoteRegistry : this.regionNameVSRemoteRegistry.values()) {
                 Application application = remoteRegistry.getApplication(appName);
                 if (application != null) {
-                    return application.getByInstanceId(id);
+                    return application.getByInstanceId(id); //找到一个就结束
                 }
             }
         }
@@ -1105,7 +1108,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         }
         return list;
     }
-
+    //包装lease为InstanceInfo
     private InstanceInfo decorateInstanceInfo(Lease<InstanceInfo> lease) {
         InstanceInfo info = lease.getHolder();
 
@@ -1113,8 +1116,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         int renewalInterval = LeaseInfo.DEFAULT_LEASE_RENEWAL_INTERVAL;
         int leaseDuration = LeaseInfo.DEFAULT_LEASE_DURATION;
 
-        // TODO: clean this up
-        if (info.getLeaseInfo() != null) {
+        // TODO: clean this up；注册表里的LeaseInfo不为空 
+        if (info.getLeaseInfo() != null) { 
             renewalInterval = info.getLeaseInfo().getRenewalIntervalInSecs();
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }

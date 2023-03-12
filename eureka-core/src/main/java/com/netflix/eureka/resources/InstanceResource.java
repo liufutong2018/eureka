@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A <em>jersey</em> resource that handles operations for a particular instance.
- * 一个jersey资源，处理特定实例的操作。类似于一个SpringMVC里的 Controller处理器
+ * 一个jersey资源，处理特定instance的操作。类似于一个SpringMVC里的 Controller处理器
  * @author Karthik Ranganathan, Greg Kim
  *
  */
@@ -136,7 +136,7 @@ public class InstanceResource {
     }
 
     /**
-     * Handles {@link InstanceStatus} updates.
+     * Handles {@link InstanceStatus} updates. 处理状态修改的请求
      *
      * <p>
      * The status updates are normally done for administrative purposes to
@@ -146,12 +146,12 @@ public class InstanceResource {
      * </p>
      *
      * @param newStatus
-     *            the new status of the instance.
+     *            the new status of the instance. 实例的新状态。
      * @param isReplication
      *            a header parameter containing information whether this is
-     *            replicated from other nodes.
+     *            replicated from other nodes. 是不是节点间的复制。
      * @param lastDirtyTimestamp
-     *            last timestamp when this instance information was updated.
+     *            last timestamp when this instance information was updated. 客户端更新此instance信息时的最后一个时间戳。
      * @return response indicating whether the operation was a success or
      *         failure.
      */
@@ -162,11 +162,11 @@ public class InstanceResource {
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         try {
-            if (registry.getInstanceByAppAndId(app.getName(), id) == null) {
+            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //查找注册表里没有此instance
                 logger.warn("Instance not found: {}/{}", app.getName(), id);
                 return Response.status(Status.NOT_FOUND).build();
             }
-            boolean isSuccess = registry.statusUpdate(app.getName(), id,
+            boolean isSuccess = registry.statusUpdate(app.getName(), id, //处理状态修改的请求
                     InstanceStatus.valueOf(newStatus), lastDirtyTimestamp,
                     "true".equals(isReplication));
 
