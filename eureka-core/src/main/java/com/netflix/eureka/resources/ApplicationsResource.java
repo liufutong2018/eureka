@@ -113,7 +113,7 @@ public class ApplicationsResource {
      * @return a response containing information about all {@link com.netflix.discovery.shared.Applications}
      *         from the {@link AbstractInstanceRegistry}.
      */
-    @GET
+    @GET //全量下载请求
     public Response getContainers(@PathParam("version") String version,
                                   @HeaderParam(HEADER_ACCEPT) String acceptHeader,
                                   @HeaderParam(HEADER_ACCEPT_ENCODING) String acceptEncoding,
@@ -134,7 +134,7 @@ public class ApplicationsResource {
         // Check if the server allows the access to the registry. The server can
         // restrict access if it is not
         // ready to serve traffic depending on various reasons.
-        if (!registry.shouldAllowAccess(isRemoteRegionRequested)) {
+        if (!registry.shouldAllowAccess(isRemoteRegionRequested)) { //判断是否禁止访问
             return Response.status(Status.FORBIDDEN).build();
         }
         CurrentRequestVersion.set(Version.toEnum(version));
@@ -146,13 +146,13 @@ public class ApplicationsResource {
         }
 
         Key cacheKey = new Key(Key.EntityType.Application,
-                ResponseCacheImpl.ALL_APPS,
+                ResponseCacheImpl.ALL_APPS, //ALL_APPS 全量下载
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
         );
 
         Response response;
         if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
-            response = Response.ok(responseCache.getGZIP(cacheKey))
+            response = Response.ok(responseCache.getGZIP(cacheKey)) //获取到一个压缩过的结果
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)
                     .build();
@@ -193,7 +193,7 @@ public class ApplicationsResource {
      *         {@link AbstractInstanceRegistry}.
      */
     @Path("delta")
-    @GET
+    @GET //处理增量下载请求
     public Response getContainerDifferential(
             @PathParam("version") String version,
             @HeaderParam(HEADER_ACCEPT) String acceptHeader,
@@ -204,7 +204,8 @@ public class ApplicationsResource {
         boolean isRemoteRegionRequested = null != regionsStr && !regionsStr.isEmpty();
 
         // If the delta flag is disabled in discovery or if the lease expiration
-        // has been disabled, redirect clients to get all instances
+        // has been disabled, redirect clients to get all instances；
+        // 若禁止增量下载或禁止访问，则直接结束，返回FORBIDDEN
         if ((serverConfig.shouldDisableDelta()) || (!registry.shouldAllowAccess(isRemoteRegionRequested))) {
             return Response.status(Status.FORBIDDEN).build();
         }
@@ -227,14 +228,14 @@ public class ApplicationsResource {
         }
 
         Key cacheKey = new Key(Key.EntityType.Application,
-                ResponseCacheImpl.ALL_APPS_DELTA,
+                ResponseCacheImpl.ALL_APPS_DELTA, //增量下载
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
         );
 
         final Response response;
 
         if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
-             response = Response.ok(responseCache.getGZIP(cacheKey))
+             response = Response.ok(responseCache.getGZIP(cacheKey)) //getGZIP
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)
                     .build();

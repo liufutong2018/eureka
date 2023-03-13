@@ -129,7 +129,7 @@ public class ResponseCacheImpl implements ResponseCache {
         this.registry = registry;
 
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
-        this.readWriteCacheMap =
+        this.readWriteCacheMap = //在构造器中创建并初始化了这个读写缓存map
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
                         .removalListener(new RemovalListener<Key, Value>() {
@@ -149,12 +149,12 @@ public class ResponseCacheImpl implements ResponseCache {
                                     Key cloneWithNoRegions = key.cloneWithoutRegions();
                                     regionSpecificKeys.put(cloneWithNoRegions, key);
                                 }
-                                Value value = generatePayload(key);
+                                Value value = generatePayload(key); //获取到全量/增量的值
                                 return value;
                             }
                         });
 
-        if (shouldUseReadOnlyResponseCache) {
+        if (shouldUseReadOnlyResponseCache) {//在ResponseCachelmpl构造器中定义并开启了一个定时任务，用于定时从readWriteCacheMap中更新readOnlyCacheMap中的数据
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
                             + responseCacheUpdateIntervalMs),
@@ -171,8 +171,9 @@ public class ResponseCacheImpl implements ResponseCache {
     private TimerTask getCacheUpdateTask() {
         return new TimerTask() {
             @Override
-            public void run() {
+            public void run() { //定时从readWriteCacheMap中更新readOnlyCacheMap中的数据
                 logger.debug("Updating the client cache from response cache");
+                // 遍历只读缓存中所有的key
                 for (Key key : readOnlyCacheMap.keySet()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("Updating the client cache from response cache for key : {} {} {} {}",
@@ -180,8 +181,11 @@ public class ResponseCacheImpl implements ResponseCache {
                     }
                     try {
                         CurrentRequestVersion.set(key.getVersion());
+                        // 从读写缓存map 中获取当前遍历key对应的value
                         Value cacheValue = readWriteCacheMap.get(key);
+                        // 从只读缓存map中获取当前遍历key对应的value
                         Value currentCacheValue = readOnlyCacheMap.get(key);
+                        // 若从两个集合中获取到的同一个key对应的value不同则将读写缓存map中的值替换只读缓存map中对应key的value，实现数据更新
                         if (cacheValue != currentCacheValue) {
                             readOnlyCacheMap.put(key, cacheValue);
                         }
@@ -223,7 +227,7 @@ public class ResponseCacheImpl implements ResponseCache {
 
     /**
      * Get the compressed information about the applications.
-     *
+     * 获取关于applications的压缩信息。
      * @param key
      *            the key for which the compressed cached information needs to
      *            be obtained.
@@ -231,11 +235,11 @@ public class ResponseCacheImpl implements ResponseCache {
      *         applications.
      */
     public byte[] getGZIP(Key key) {
-        Value payload = getValue(key, shouldUseReadOnlyResponseCache);
+        Value payload = getValue(key, shouldUseReadOnlyResponseCache); //获取负载
         if (payload == null) {
             return null;
         }
-        return payload.getGzipped();
+        return payload.getGzipped(); //压缩负载
     }
 
     @Override
@@ -348,19 +352,19 @@ public class ResponseCacheImpl implements ResponseCache {
     }
 
     /**
-     * Get the payload in both compressed and uncompressed form.
+     * Get the payload in both compressed and uncompressed form. 获得压缩和未压缩形式的有效载荷。
      */
     @VisibleForTesting
     Value getValue(final Key key, boolean useReadOnlyCache) {
         Value payload = null;
         try {
             if (useReadOnlyCache) {
-                final Value currentPayload = readOnlyCacheMap.get(key);
+                final Value currentPayload = readOnlyCacheMap.get(key); //从只读的缓存map中获取
                 if (currentPayload != null) {
                     payload = currentPayload;
                 } else {
-                    payload = readWriteCacheMap.get(key);
-                    readOnlyCacheMap.put(key, payload);
+                    payload = readWriteCacheMap.get(key); //从读写的缓存map中获取
+                    readOnlyCacheMap.put(key, payload); //将该值再放入到只读缓存map中
                 }
             } else {
                 payload = readWriteCacheMap.get(key);
@@ -415,23 +419,23 @@ public class ResponseCacheImpl implements ResponseCache {
             String payload;
             switch (key.getEntityType()) {
                 case Application:
-                    boolean isRemoteRegionRequested = key.hasRegions();
+                    boolean isRemoteRegionRequested = key.hasRegions(); //远程Regions
 
-                    if (ALL_APPS.equals(key.getName())) {
+                    if (ALL_APPS.equals(key.getName())) { //处理全量下载
                         if (isRemoteRegionRequested) {
                             tracer = serializeAllAppsWithRemoteRegionTimer.start();
-                            payload = getPayLoad(key, registry.getApplicationsFromMultipleRegions(key.getRegions()));
+                            payload = getPayLoad(key, registry.getApplicationsFromMultipleRegions(key.getRegions()));//getApplicationsFromMultipleRegions()全量下载
                         } else {
                             tracer = serializeAllAppsTimer.start();
                             payload = getPayLoad(key, registry.getApplications());
                         }
-                    } else if (ALL_APPS_DELTA.equals(key.getName())) {
+                    } else if (ALL_APPS_DELTA.equals(key.getName())) { //处理增量下载
                         if (isRemoteRegionRequested) {
                             tracer = serializeDeltaAppsWithRemoteRegionTimer.start();
                             versionDeltaWithRegions.incrementAndGet();
                             versionDeltaWithRegionsLegacy.incrementAndGet();
                             payload = getPayLoad(key,
-                                    registry.getApplicationDeltasFromMultipleRegions(key.getRegions()));
+                                    registry.getApplicationDeltasFromMultipleRegions(key.getRegions()));//增量下载
                         } else {
                             tracer = serializeDeltaAppsTimer.start();
                             versionDelta.incrementAndGet();

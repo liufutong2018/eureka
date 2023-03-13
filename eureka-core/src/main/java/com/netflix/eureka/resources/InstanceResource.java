@@ -266,7 +266,7 @@ public class InstanceResource {
     }
 
     /**
-     * Handles cancellation of leases for this particular instance.
+     * Handles cancellation of leases for this particular instance； 处理服务下架请求
      *
      * @param isReplication
      *            a header parameter containing information whether this is
@@ -278,8 +278,7 @@ public class InstanceResource {
     public Response cancelLease(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         try {
-            boolean isSuccess = registry.cancel(app.getName(), id,
-                "true".equals(isReplication));
+            boolean isSuccess = registry.cancel(app.getName(), id, "true".equals(isReplication)); //处理取消请求
 
             if (isSuccess) {
                 logger.debug("Found (Cancel): {} - {}", app.getName(), id);

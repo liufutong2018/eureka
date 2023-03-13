@@ -225,8 +225,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 synchronized (lock) {
                     if (this.expectedNumberOfClientsSendingRenews > 0) {
                         // Since the client wants to register it, increase the number of clients sending renews
-                        this.expectedNumberOfClientsSendingRenews = this.expectedNumberOfClientsSendingRenews + 1;
-                        updateRenewsPerMinThreshold();
+                        this.expectedNumberOfClientsSendingRenews = this.expectedNumberOfClientsSendingRenews + 1; //客户端多了一个
+                        updateRenewsPerMinThreshold(); //
                     }
                 }
                 logger.debug("No previous lease information found; it is new registration");
@@ -274,7 +274,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     }
 
     /**
-     * Cancels the registration of an instance.
+     * Cancels the registration of an instance. 处理服务下架请求
      *
      * <p>
      * This is normally invoked by a client when it shuts down informing the
@@ -292,7 +292,12 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         return internalCancel(appName, id, isReplication);
     }
 
-    /**
+    /** 处理服务下架请求
+        处理下架请求完成的主要任务：
+            将该client从注册表中删除
+            从缓存map中删除指定client的overriddenStatus
+            将本次操作记录到recentlyChangedQueue
+            修改注册表中该client的lastUpdatedTimestamp
      * {@link #cancel(String, String, boolean)} method is overridden by {@link PeerAwareInstanceRegistry}, so each
      * cancel request is replicated to the peers. This is however not desired for expires which would be counted
      * in the remote peers as valid cancellations, so self preservation mode would not kick-in.
@@ -304,26 +309,26 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             Map<String, Lease<InstanceInfo>> gMap = registry.get(appName);
             Lease<InstanceInfo> leaseToCancel = null;
             if (gMap != null) {
-                leaseToCancel = gMap.remove(id);
+                leaseToCancel = gMap.remove(id); //将该client从注册表中删除
             }
             recentCanceledQueue.add(new Pair<Long, String>(System.currentTimeMillis(), appName + "(" + id + ")"));
-            InstanceStatus instanceStatus = overriddenInstanceStatusMap.remove(id);
+            InstanceStatus instanceStatus = overriddenInstanceStatusMap.remove(id); //将该client的overriddenStatus从缓存map中删除
             if (instanceStatus != null) {
                 logger.debug("Removed instance id {} from the overridden map which has value {}", id, instanceStatus.name());
             }
-            if (leaseToCancel == null) {
+            if (leaseToCancel == null) { //若这个被删除的Lease不存在，则返回false(404)，表示这个客户端不存在
                 CANCEL_NOT_FOUND.increment(isReplication);
                 logger.warn("DS: Registry: cancel failed because Lease is not registered for: {}/{}", appName, id);
                 return false;
             } else {
-                leaseToCancel.cancel();
+                leaseToCancel.cancel(); //下架操作
                 InstanceInfo instanceInfo = leaseToCancel.getHolder();
                 String vip = null;
                 String svip = null;
                 if (instanceInfo != null) {
-                    instanceInfo.setActionType(ActionType.DELETED);
-                    recentlyChangedQueue.add(new RecentlyChangedItem(leaseToCancel));
-                    instanceInfo.setLastUpdatedTimestamp();
+                    instanceInfo.setActionType(ActionType.DELETED); //记录本次操作类型
+                    recentlyChangedQueue.add(new RecentlyChangedItem(leaseToCancel)); //将本次操作记录到“最近更新队列”
+                    instanceInfo.setLastUpdatedTimestamp(); //更新时间
                     vip = instanceInfo.getVIPAddress();
                     svip = instanceInfo.getSecureVipAddress();
                 }
@@ -517,7 +522,12 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     /**
      * Removes status override for a give instance. 删除状态
-     *
+     * 处理删除overridden状态请求完成的主要任务：
+        从缓存map中删除指定client的overriddenStatus
+        修改注册表中该client的overriddenStatus为UNKNOWN
+        修改注册表中该client的status为UNKNOWN
+        将本次操作记录到recentlyChangedOueue 
+        修改注册表中该client的lastUpdatedTimestamp
      * @param appName the application name of the instance.
      * @param id the unique identifier of the instance.
      * @param newStatus the new {@link InstanceStatus}.
@@ -734,10 +744,10 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      *
      * @return The applications with instances from the passed remote regions as well as local region. The instances
      * from remote regions can be only for certain whitelisted apps as explained above.
-     */
+     */ //处理全量下载
     public Applications getApplicationsFromMultipleRegions(String[] remoteRegions) {
 
-        boolean includeRemoteRegion = null != remoteRegions && remoteRegions.length != 0;
+        boolean includeRemoteRegion = null != remoteRegions && remoteRegions.length != 0; //有远程Regions就是true
 
         logger.debug("Fetching applications registry with remote regions: {}, Regions argument {}",
                 includeRemoteRegion, remoteRegions);
@@ -749,15 +759,20 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         }
         Applications apps = new Applications();
         apps.setVersion(1L);
+
+        // 获取本地注册表中的服务
         for (Entry<String, Map<String, Lease<InstanceInfo>>> entry : registry.entrySet()) {
             Application app = null;
 
-            if (entry.getValue() != null) {
+            if (entry.getValue() != null) { //若注册表不为空，则遍历注册表
+                // 遍历注册表内层map的所有entry
                 for (Entry<String, Lease<InstanceInfo>> stringLeaseEntry : entry.getValue().entrySet()) {
+                    // 获取到当前遍历entry的value，即lease对象 (可以看作是client)
                     Lease<InstanceInfo> lease = stringLeaseEntry.getValue();
                     if (app == null) {
                         app = new Application(lease.getHolder().getAppName());
                     }
+                    // 将当前Lease封装为instanceInfo
                     app.addInstance(decorateInstanceInfo(lease));
                 }
             }
@@ -765,6 +780,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 apps.addApplication(app);
             }
         }
+
+        // 获取远程Region中的服务
         if (includeRemoteRegion) {
             for (String remoteRegion : remoteRegions) {
                 RemoteRegionRegistry remoteRegistry = regionNameVSRemoteRegistry.get(remoteRegion);
@@ -1187,11 +1204,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         // invalidate cache
         responseCache.invalidate(appName, vipAddress, secureVipAddress);
     }
-
+    // 
     protected void updateRenewsPerMinThreshold() {
         this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfClientsSendingRenews
                 * (60.0 / serverConfig.getExpectedClientRenewalIntervalSeconds())
                 * serverConfig.getRenewalPercentThreshold());
+                // 客户端数量 * (60 / 心跳间隔) * 自我保护开启的阈值因子
+                // 客户端数量 * 每个客户端每分钟发送心跳的数量 * 阈值因子
+                // (所有客户端每分钟发送的心跳数量 * 阈值因子)
+                // 当前server开启自我保护机制的每分钟最小心跳数量
     }
 
     private static final class RecentlyChangedItem {
