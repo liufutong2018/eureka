@@ -42,8 +42,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 该类用于保存一个微服务主机的信息。一个该类实例就代表了一个微服务主机。该主机注册到Eureka Server
+ * 就是将其InstanceInfo写入到了Eureka注册表，且被其它Server读取到的该Server的信息也是这个InstanceInfo。
  * The class that holds information required for registration with
- * <tt>Eureka Server</tt> and to be discovered by other components.
+ * <tt>Eureka Server</tt> and to be discovered by other components.保存注册所需信息的类 EurekaServer 并被其他组件发现。
  * <p>
  * <code>@Auto</code> annotated fields are serialized as is; Other fields are
  * serialized as specified by the <code>@Serializer</code>.
