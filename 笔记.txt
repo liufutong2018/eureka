@@ -64,16 +64,21 @@ EurekaClient.java 源码
                 return decorateInstanceInfo(lease); //包装成InstanceInfo
         registry.statusUpdate() //处理状态修改的请求 
 
-    1.2 replicateToPeers() Server间的复制；使用jersey框架
+    1.2 replicateToPeers() 处理Server间的复制；使用jersey框架
         PeerAwareInstanceRegistryImpl.java statusUpdate() 
+            if (super.statusUpdate(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //缺失？
+
             replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制
                 replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); //复制信息给除了自己之外的其他EurekaServer
                     node.statusUpdate(appName, id, newStatus, infoFromRegistry); //状态修改 
                         PeerEurekaNode.statusUpdate() replicationClient.statusUpdate(appName, id, newStatus, info); // server间的复制 
                             AbstractJerseyEurekaHttpClient.statusUpdate() requestBuilder.put(ClientResponse.class); //put请求，修改状态
 
-
-
+    1.3 deleteStatusUpdate() 处理客户端删除overridden状态请求；客户端提交了CANCEL_OVERRIDE状态请求，服务端在此处理
+        registry.deleteStatusOverride() //进行删除 
+            PeerAwareInstanceRegistryImpl.deleteStatusOverride()
+                if (super.deleteStatusOverride(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //删除 AbstractInstanceRegistry.deleteStatusOverride()
+                replicateToPeers(Action.DeleteStatusOverride, appName, id, null, null, isReplication); //做同步 删除
 
 
 

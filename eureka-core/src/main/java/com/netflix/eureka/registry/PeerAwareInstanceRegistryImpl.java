@@ -438,13 +438,14 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     public boolean statusUpdate(final String appName, final String id,
                                 final InstanceStatus newStatus, String lastDirtyTimestamp,
                                 final boolean isReplication) {
-        if (super.statusUpdate(appName, id, newStatus, lastDirtyTimestamp, isReplication)) {
+        if (super.statusUpdate(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //缺失？
             replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制
             return true;
         }
         return false;
     }
 
+    //处理客户端删除overridden状态请求 
     @Override
     public boolean deleteStatusOverride(String appName, String id,
                                         InstanceStatus newStatus,

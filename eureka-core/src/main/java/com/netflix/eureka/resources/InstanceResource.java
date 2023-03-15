@@ -196,13 +196,13 @@ public class InstanceResource {
      *         failure.
      */
     @DELETE
-    @Path("status")
+    @Path("status") //处理客户端删除overridden状态请求 
     public Response deleteStatusUpdate(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication,
             @QueryParam("value") String newStatusValue, //新的状态 null
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         try {
-            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //现在注册表里找
+            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //根据微服务名称和instanceId查找出InstanceInfo
                 logger.warn("Instance not found: {}/{}", app.getName(), id);
                 return Response.status(Status.NOT_FOUND).build();
             }

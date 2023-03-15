@@ -283,7 +283,7 @@ public class PeerEurekaNode {
     }
 
     /**
-     * Delete instance status override.
+     * Delete instance status override. 
      *
      * @param appName
      *            the application name of the instance.
