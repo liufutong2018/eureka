@@ -48,7 +48,7 @@ public class TimedSupervisorTask extends TimerTask {
         this.timeoutMillis = timeUnit.toMillis(timeout);
         this.task = task;
         this.delay = new AtomicLong(timeoutMillis);
-        this.maxDelay = timeoutMillis * expBackOffBound;
+        this.maxDelay = timeoutMillis * expBackOffBound; //最大延时 30s * 10 = 300S
 
         // Initialize the counters and register.
         successCounter = Monitors.newCounter("success");
@@ -63,10 +63,10 @@ public class TimedSupervisorTask extends TimerTask {
     public void run() {
         Future<?> future = null;
         try {
-            future = executor.submit(task); //异步执行
+            future = executor.submit(task); //异步执行 CacheRefreshThread().run()
             threadPoolLevelGauge.set((long) executor.getActiveCount());
-            future.get(timeoutMillis, TimeUnit.MILLISECONDS); // 阻塞直到完成或超时； block until done or timeout
-            delay.set(timeoutMillis); //
+            future.get(timeoutMillis, TimeUnit.MILLISECONDS); //阻塞直到task->CacheRefreshThread().run() 完成或超时； block until done or timeout
+            delay.set(timeoutMillis); //初始化一次delay，为下一次做准备
             threadPoolLevelGauge.set((long) executor.getActiveCount());
             successCounter.increment();
         } catch (TimeoutException e) { //超时失败
@@ -75,7 +75,7 @@ public class TimedSupervisorTask extends TimerTask {
 
             long currentDelay = delay.get();
             long newDelay = Math.min(maxDelay, currentDelay * 2); //时间*2
-            delay.compareAndSet(currentDelay, newDelay);
+            delay.compareAndSet(currentDelay, newDelay);//更新delay，为下一次做准备
 
         } catch (RejectedExecutionException e) {
             if (executor.isShutdown() || scheduler.isShutdown()) {
@@ -94,12 +94,12 @@ public class TimedSupervisorTask extends TimerTask {
 
             throwableCounter.increment();
         } finally {
-            if (future != null) {
+            if (future != null) { //future正常执行完毕就是null，发生超时或其他异常就不为null
                 future.cancel(true); //取消异步操作
             }
 
-            if (!scheduler.isShutdown()) {
-                scheduler.schedule(this, delay.get(), TimeUnit.MILLISECONDS); //多次执行
+            if (!scheduler.isShutdown()) { //定时器没有关闭
+                scheduler.schedule(this, delay.get(), TimeUnit.MILLISECONDS); //能够实现下一次的调用，多次执行
             }
         }
     }

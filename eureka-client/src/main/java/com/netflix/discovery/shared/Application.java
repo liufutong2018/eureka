@@ -98,15 +98,15 @@ public class Application {
     }
 
     /**
-     * Add the given instance info the list. 将给定的实例信息添加到列表中。
+     * Add the given instance info the list. 将给定的实例信息添加 到列表中。
      *
      * @param i
-     *            the instance info object to be added.
+     *            要添加的instance信息对象；the instance info object to be added.
      */
     public void addInstance(InstanceInfo i) {
         instancesMap.put(i.getId(), i);
-        synchronized (instances) {
-            instances.remove(i); //删掉老的
+        synchronized (instances) { //迭代稳定性
+            instances.remove(i); //删掉id相同的，其他数据可能不同，老的
             instances.add(i); //加入新的
             isDirty = true; //现在发生变化了，但还没同步到服务端，所以是脏的
         }

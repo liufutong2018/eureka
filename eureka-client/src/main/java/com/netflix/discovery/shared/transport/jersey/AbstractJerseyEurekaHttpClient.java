@@ -43,7 +43,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         logger.debug("Created client for url: {}", serviceUrl);
     }
 
-    @Override
+    @Override //client注册
     public EurekaHttpResponse<Void> register(InstanceInfo info) {
         String urlPath = "apps/" + info.getAppName();
         ClientResponse response = null;
@@ -96,7 +96,8 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
                     .queryParam("status", info.getStatus().toString()) //当前状态
                     .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString()); //当前InstanceInfo在client端被修改的时间
             if (overriddenStatus != null) {
-                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name()); //续约、注册时，。。。用于计算status
+                //overriddenstatus：服务端处理续约、注册时，需要对服务端的InstanceInfo的status重新计算；服务端的状态为UP时才能被发现
+                webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name()); 
             }
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);
@@ -193,7 +194,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
             }
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);
-            //提交get请求，获取注册表
+            //提交get请求给服务端，获取注册表
             response = requestBuilder.accept(MediaType.APPLICATION_JSON_TYPE).get(ClientResponse.class);
 
             Applications applications = null;
