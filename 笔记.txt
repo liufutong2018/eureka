@@ -1,4 +1,4 @@
-1. EurekaClient.java 源码
+EurekaClient.java 源码
  1 DiscoveryClient() 构造方法 六个参数
  1.1 fetchRegistry(false); //从远程获取注册表信息
      1.1.1 getAndStoreFullRegistry(); //全量获取注册表
@@ -30,10 +30,49 @@
                 register(); //[第一次注册；] 如果返回续约状态状态码为404,则进行注册
 
      1.3.3 定时更新client信息给server（client端配置文件信息发生变化）
-            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds()); //启动定时任务更新client信息给server
-                scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务，一次性的；更新client信息给server；执行run()
-                run() // 更新client信息给server
-                
-            InstanceInfoReplicator.java  instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，按需更新client信息给server
+            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds()); //启动[定时任务]更新client信息给server 
+            InstanceInfoReplicator.java  scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务，一次性的；更新client信息给server；执行run()
+                run() // 更新client信息给server 
+                    discoveryClient.refreshInstanceInfo(); //更新instanceInfo信息
+                        applicationInfoManager.refreshLeaseInfoIfRequired(); //更新续约信息
+                    discoveryClient.register(); //提交【注册请求】给server
+
+            InstanceInfoReplicator.java  instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，[按需更新]client信息给server
+                run() // 更新client信息给server 
             
+ 2 client服务下架
+ 2.1 shutdown() 下架
+    2.1.1 去掉监听器、取消定时任务、如果如果Manager不为null，取消注册
+        unregister(); //取消注册
+            eurekaTransport.registrationClient.cancel(instanceInfo.getAppName(), instanceInfo.getId()); 提交下架请求
+                AbstractJerseyEurekaHttpClient.java cancel()
+                    resourceBuilder.delete(ClientResponse.class); //delete请求
+
+ 3 client服务下线；下线请求，提交的状态为CANCEL_OVERRIDE，不提供注册发现了，本身还在启动着
+ 3.1 spring-cloud-commons/src/main/java/org/springframework/cloud/client/serviceregistry/ServiceRegistryAutoConfiguration.java
+ 3.2 spring-cloud-netflix-eureka-client/src/main/java/org/springframework/cloud/netflix/eureka/serviceregistry/EurekaServiceRegistry.java
+ 3.3 AbstractJerseyEurekaHttpClient.java deleteStatusOverride() 下线
+     requestBuilder.delete(ClientResponse.class); //delete请求
+
+客户端
+============================================================================================================================
+服务端
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

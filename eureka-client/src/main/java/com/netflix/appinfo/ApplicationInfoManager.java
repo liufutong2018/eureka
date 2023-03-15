@@ -246,22 +246,22 @@ public class ApplicationInfoManager {
     }
 
     public void refreshLeaseInfoIfRequired() { //更新续约信息
-        LeaseInfo leaseInfo = instanceInfo.getLeaseInfo(); //获取续约信息
+        LeaseInfo leaseInfo = instanceInfo.getLeaseInfo(); //从本地缓存获取续约信息
         if (leaseInfo == null) {
             return;
         }
-        int currentLeaseDuration = config.getLeaseExpirationDurationInSeconds();//从配置文件获取此值
-        int currentLeaseRenewal = config.getLeaseRenewalIntervalInSeconds();//从配置文件获取此值
-        //配置文件里的和本地缓存不一样
+        int currentLeaseDuration = config.getLeaseExpirationDurationInSeconds();//多久不向server发送心跳就可以让server将其在注册表中删除了，默认为90s
+        int currentLeaseRenewal = config.getLeaseRenewalIntervalInSeconds();//心跳间隔，默认30s
+        //本地缓存和配置文件里的不一样
         if (leaseInfo.getDurationInSecs() != currentLeaseDuration || leaseInfo.getRenewalIntervalInSecs() != currentLeaseRenewal) {
             /** 迭代稳定性的变形使用; 送代稳定性:一般情况下，对于多线程操作的共享数组/集合，
                 我们在对其元素进行修改操作时不要直接对该数组/集合进行操作，而是重新创建一个临时的数组/集合，
                 将原数组(集合中的数据复制给临时数组/集合，然后再对这个临时数组集合执行修改操作。
                 执行完毕后再安临时数组/集合赋值给原数组/集合。这个作是为了保证送代稳定性。当然，这里要保证互斥（加锁）
              */
-            LeaseInfo newLeaseInfo = LeaseInfo.Builder.newBuilder() //
-                    .setRenewalIntervalInSecs(currentLeaseRenewal)
-                    .setDurationInSecs(currentLeaseDuration)
+            LeaseInfo newLeaseInfo = LeaseInfo.Builder.newBuilder() 
+                    .setRenewalIntervalInSecs(currentLeaseRenewal) //将配置文件里的更新进去
+                    .setDurationInSecs(currentLeaseDuration) //将配置文件里的更新进去
                     .build();
             instanceInfo.setLeaseInfo(newLeaseInfo); //把最新的设置进去
             instanceInfo.setIsDirty(); //客户端改了，服务端还没改，设置为脏的

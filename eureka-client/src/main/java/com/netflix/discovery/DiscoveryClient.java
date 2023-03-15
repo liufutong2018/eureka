@@ -935,7 +935,7 @@ public class DiscoveryClient implements EurekaClient {
     @Override
     public synchronized void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
-            logger.info("Shutting down DiscoveryClient；关闭DiscoveryClient ...");
+            logger.info("Shutting down DiscoveryClient; 关闭DiscoveryClient ...");
 
             if (statusChangeListener != null && applicationInfoManager != null) { //去掉监听器
                 applicationInfoManager.unregisterStatusChangeListener(statusChangeListener.getId());
@@ -943,7 +943,7 @@ public class DiscoveryClient implements EurekaClient {
 
             cancelScheduledTasks(); //取消定时任务
 
-            // If APPINFO was registered 如果APPINFO已注册
+            // If APPINFO was registered 如果Manager不为null
             if (applicationInfoManager != null
                     && clientConfig.shouldRegisterWithEureka()
                     && clientConfig.shouldUnregisterOnShutdown()) {
@@ -971,7 +971,7 @@ public class DiscoveryClient implements EurekaClient {
         // It can be null if shouldRegisterWithEureka == false
         if(eurekaTransport != null && eurekaTransport.registrationClient != null) {
             try {
-                logger.info("Unregistering ..."); //AbstractJerseyEurekaHttpClient.cancel() 
+                logger.info("Unregistering ..."); //AbstractJerseyEurekaHttpClient.cancel() 提交下架请求
                 EurekaHttpResponse<Void> httpResponse = eurekaTransport.registrationClient.cancel(instanceInfo.getAppName(), instanceInfo.getId());
                 logger.info(PREFIX + "{} - deregister  status: {}", appPathIdentifier, httpResponse.getStatusCode());
             } catch (Exception e) {
@@ -1368,7 +1368,7 @@ public class DiscoveryClient implements EurekaClient {
                 }
             };
 
-            if (clientConfig.shouldOnDemandUpdateStatusChange()) {
+            if (clientConfig.shouldOnDemandUpdateStatusChange()) { //默认为true
                 applicationInfoManager.registerStatusChangeListener(statusChangeListener);
             }
             //启动定时任务定时更新client信息给server
@@ -1383,19 +1383,19 @@ public class DiscoveryClient implements EurekaClient {
             instanceInfoReplicator.stop(); //取消定时更新client信息给server
         }
         if (heartbeatExecutor != null) {
-            heartbeatExecutor.shutdownNow(); //取消心跳
+            heartbeatExecutor.shutdownNow(); //Executor取消 
         }
         if (cacheRefreshExecutor != null) {
-            cacheRefreshExecutor.shutdownNow(); //取消定时更新客户端注册表
+            cacheRefreshExecutor.shutdownNow(); //Executor取消 
         }
         if (scheduler != null) {
             scheduler.shutdownNow(); //取消定时器
         }
         if (cacheRefreshTask != null) {
-            cacheRefreshTask.cancel();
+            cacheRefreshTask.cancel(); //取消任务
         }
         if (heartbeatTask != null) {
-            heartbeatTask.cancel();
+            heartbeatTask.cancel(); //取消任务
         }
     }
 

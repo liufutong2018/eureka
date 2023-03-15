@@ -40,7 +40,7 @@ public class LeaseInfo {
     public static final int DEFAULT_LEASE_RENEWAL_INTERVAL = 30; //续约间隔
     public static final int DEFAULT_LEASE_DURATION = 90; //90S没发心跳，server就可以认为其挂了
 
-    // Client settings
+    // Client settings 可以配置文件指定
     private int renewalIntervalInSecs = DEFAULT_LEASE_RENEWAL_INTERVAL;
     private int durationInSecs = DEFAULT_LEASE_DURATION;
 

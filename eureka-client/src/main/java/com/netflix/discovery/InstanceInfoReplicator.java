@@ -93,13 +93,13 @@ class InstanceInfoReplicator implements Runnable {
                     public void run() {
                         logger.debug("Executing on-demand update of local InstanceInfo");
     
-                        Future latestPeriodic = scheduledPeriodicRef.get();
+                        Future latestPeriodic = scheduledPeriodicRef.get(); //看看有没有执行中的，取出
                         if (latestPeriodic != null && !latestPeriodic.isDone()) { //如果发生了按需更新，会把最近的定时更新取消掉 ，不会出现多条线
                             logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
                             latestPeriodic.cancel(false); //取消执行
                         }
     
-                        InstanceInfoReplicator.this.run(); //执行下面的那个run()
+                        InstanceInfoReplicator.this.run(); //执行下面的那个run() 按需更新
                     }
                 });
                 return true;
@@ -120,14 +120,14 @@ class InstanceInfoReplicator implements Runnable {
 
             Long dirtyTimestamp = instanceInfo.isDirtyWithTime(); //返回客户端修改的时间
             if (dirtyTimestamp != null) { //客户端发生了修改
-                discoveryClient.register(); //提交注册请求给server
+                discoveryClient.register(); //提交【注册请求】给server
                 instanceInfo.unsetIsDirty(dirtyTimestamp);//取消设置为脏
             }
         } catch (Throwable t) {
             logger.warn("There was a problem with the instance info replicator", t);
         } finally {
             Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS); //执行多次
-            scheduledPeriodicRef.set(next);
+            scheduledPeriodicRef.set(next); //定时任务放到此处
         }
     }
 
