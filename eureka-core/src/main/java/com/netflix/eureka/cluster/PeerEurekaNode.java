@@ -268,13 +268,14 @@ public class PeerEurekaNode {
      */
     public void statusUpdate(final String appName, final String id,
                              final InstanceStatus newStatus, final InstanceInfo info) {
-        long expiryTime = System.currentTimeMillis() + maxProcessingDelayMs;
+        long expiryTime = System.currentTimeMillis() + maxProcessingDelayMs; //maxProcessingDelayMs：最多往后推迟的时间
         batchingDispatcher.process(
                 taskId("statusUpdate", appName, id),
                 new InstanceReplicationTask(targetHost, Action.StatusUpdate, info, null, false) {
                     @Override
                     public EurekaHttpResponse<Void> execute() {
-                        return replicationClient.statusUpdate(appName, id, newStatus, info); // AbstractJerseyEurekaHttpClient.statusUpdate()，server间的复制
+                        // AbstractJerseyEurekaHttpClient.statusUpdate()，server间的复制
+                        return replicationClient.statusUpdate(appName, id, newStatus, info); 
                     }
                 },//这个任务必须在过期时间之前完成
                 expiryTime //过期时间

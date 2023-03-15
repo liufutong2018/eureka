@@ -1026,7 +1026,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     /**
      * Gets the {@link InstanceInfo} information.
-     *
+     * 查找注册表里没有此instance
      * @param appName the application name for which the information is requested.
      * @param id the unique identifier of the instance.
      * @return the information about the instance.
@@ -1038,27 +1038,27 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     /**
      * Gets the {@link InstanceInfo} information.
-     *
+     * 查找注册表里没有此instance
      * @param appName the application name for which the information is requested.
      * @param id the unique identifier of the instance.
-     * @param includeRemoteRegions true, if we need to include applications from remote regions
-     *                             as indicated by the region {@link URL} by this property；是否包含远程region
+     * @param includeRemoteRegions 是否包含远程region; true, if we need to include applications from remote regions
+     *                             as indicated by the region {@link URL} by this property；
      *                             {@link EurekaServerConfig#getRemoteRegionUrls()}, false otherwise
      * @return the information about the instance.
      */
-    @Override
+    @Override //根据微服务名称和instanceId查找出InstanceInfo
     public InstanceInfo getInstanceByAppAndId(String appName, String id, boolean includeRemoteRegions) {
         Map<String, Lease<InstanceInfo>> leaseMap = registry.get(appName); //registry：服务端注册表
         Lease<InstanceInfo> lease = null;
         if (leaseMap != null) {
-            lease = leaseMap.get(id); //lease:客户端
+            lease = leaseMap.get(id); //lease: InstanceInfo 客户端
         }
         if (lease != null
                 && (!isLeaseExpirationEnabled() || !lease.isExpired())) {//没过期
-            return decorateInstanceInfo(lease); //包装成InstanceInfo
+            return decorateInstanceInfo(lease); //包装成 InstanceInfo
         } else if (includeRemoteRegions) { //不能用，但包含远程Region
-            for (RemoteRegionRegistry remoteRegistry : this.regionNameVSRemoteRegistry.values()) {
-                Application application = remoteRegistry.getApplication(appName);
+            for (RemoteRegionRegistry remoteRegistry : this.regionNameVSRemoteRegistry.values()) { //遍历所有远程注册中心
+                Application application = remoteRegistry.getApplication(appName); //获得appName的所有InstanceInfo
                 if (application != null) {
                     return application.getByInstanceId(id); //找到一个就结束
                 }
@@ -1127,18 +1127,18 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     }
     //包装lease为InstanceInfo
     private InstanceInfo decorateInstanceInfo(Lease<InstanceInfo> lease) {
-        InstanceInfo info = lease.getHolder();
+        InstanceInfo info = lease.getHolder(); //获取到注册表里的InstanceInfo
 
         // client app settings
-        int renewalInterval = LeaseInfo.DEFAULT_LEASE_RENEWAL_INTERVAL;
-        int leaseDuration = LeaseInfo.DEFAULT_LEASE_DURATION;
+        int renewalInterval = LeaseInfo.DEFAULT_LEASE_RENEWAL_INTERVAL; //30
+        int leaseDuration = LeaseInfo.DEFAULT_LEASE_DURATION; //90
 
-        // TODO: clean this up；注册表里的LeaseInfo不为空 
+        // TODO: clean this up； 注册表里的LeaseInfo 续约信息不为空
         if (info.getLeaseInfo() != null) { 
             renewalInterval = info.getLeaseInfo().getRenewalIntervalInSecs();
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
-
+        // lease里面的设置到InstanceInfo里，就是放到了注册表里
         info.setLeaseInfo(LeaseInfo.Builder.newBuilder()
                 .setRegistrationTimestamp(lease.getRegistrationTimestamp())
                 .setRenewalTimestamp(lease.getLastRenewalTimestamp())

@@ -136,8 +136,8 @@ public class InstanceResource {
     }
 
     /**
-     * Handles {@link InstanceStatus} updates. 处理状态修改的请求
-     *
+     * Handles {@link InstanceStatus} updates. 处理状态修改的请求；在UP和OUT_OF_SERVICE之间
+     * 
      * <p>
      * The status updates are normally done for administrative purposes to
      * change the instance status between {@link InstanceStatus#UP} and
@@ -162,25 +162,24 @@ public class InstanceResource {
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         try {
-            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //查找注册表里没有此instance
+            if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //根据微服务名称和instanceId查找出InstanceInfo
                 logger.warn("Instance not found: {}/{}", app.getName(), id);
-                return Response.status(Status.NOT_FOUND).build();
+                return Response.status(Status.NOT_FOUND).build(); //404不存在
             }
             boolean isSuccess = registry.statusUpdate(app.getName(), id, //处理状态修改的请求
                     InstanceStatus.valueOf(newStatus), lastDirtyTimestamp,
                     "true".equals(isReplication));
 
-            if (isSuccess) {
+            if (isSuccess) { //修改成功
                 logger.info("Status updated: {} - {} - {}", app.getName(), id, newStatus);
-                return Response.ok().build();
+                return Response.ok().build(); //成功200
             } else {
                 logger.warn("Unable to update status: {} - {} - {}", app.getName(), id, newStatus);
-                return Response.serverError().build();
+                return Response.serverError().build(); //失败500
             }
         } catch (Throwable e) {
-            logger.error("Error updating instance {} for status {}", id,
-                    newStatus);
-            return Response.serverError().build();
+            logger.error("Error updating instance {} for status {}", id, newStatus);
+            return Response.serverError().build(); //失败500
         }
     }
 

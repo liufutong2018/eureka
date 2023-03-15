@@ -129,7 +129,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
                     .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString()) //携带的参数
                     .getRequestBuilder();
             addExtraHeaders(requestBuilder);
-            response = requestBuilder.put(ClientResponse.class); //put请求
+            response = requestBuilder.put(ClientResponse.class); //put请求，请求给另一个Server了，逻辑和这个逻辑一样
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {

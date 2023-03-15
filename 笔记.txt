@@ -57,9 +57,20 @@ EurekaClient.java 源码
 客户端
 ============================================================================================================================
 服务端
+1 InstanceResource.java 一个jersey资源，处理特定instance的操作。类似于一个SpringMVC里的Controller处理器
+    1.1 statusUpdate() 处理Client状态修改请求
+        if (registry.getInstanceByAppAndId(app.getName(), id) == null) { //根据微服务名称和instanceId查找出InstanceInfo
+            AbstractInstanceRegistry.java getInstanceByAppAndId()
+                return decorateInstanceInfo(lease); //包装成InstanceInfo
+        registry.statusUpdate() //处理状态修改的请求 
 
-
-
+    1.2 replicateToPeers() Server间的复制；使用jersey框架
+        PeerAwareInstanceRegistryImpl.java statusUpdate() 
+            replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制
+                replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); //复制信息给除了自己之外的其他EurekaServer
+                    node.statusUpdate(appName, id, newStatus, infoFromRegistry); //状态修改 
+                        PeerEurekaNode.statusUpdate() replicationClient.statusUpdate(appName, id, newStatus, info); // server间的复制 
+                            AbstractJerseyEurekaHttpClient.statusUpdate() requestBuilder.put(ClientResponse.class); //put请求，修改状态
 
 
 

@@ -623,9 +623,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     }
 
     /**
-     * Replicates all eureka actions to peer eureka nodes except for replication
-     * traffic to this node.
-     * 将所有eureka操作复制到对端eureka节点(复制除外)到该节点的流量。
+     * Replicates all eureka actions to peer eureka nodes except for replication traffic to this node.
+     * 将所有eureka操作复制到对端eureka节点(到此节点的复制流量除外)。
      */
     private void replicateToPeers(Action action, String appName, String id,
                                   InstanceInfo info /* optional */,
@@ -635,7 +634,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             if (isReplication) { //客户端发来的不是复制
                 numberOfReplicationsLastMin.increment();
             }
-            // If it is a replication already, do not replicate again as this will create a poison replication；如果已经是复制，则不要再次复制
+            // Eureka服务器节点如果为空，或者是复制，则直接结束了；If it is a replication already, do not replicate again as this will create a poison replication
             if (peerEurekaNodes == Collections.EMPTY_LIST || isReplication) {
                 return;
             }
@@ -645,7 +644,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                 if (peerEurekaNodes.isThisMyUrl(node.getServiceUrl())) {
                     continue; //遍历所有Eureka，如果是自己就跳过
                 }
-                replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); // 
+                // 复制信息给除了自己之外的其他EurekaServer
+                replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); 
             }
         } finally {
             tracer.stop();
@@ -653,9 +653,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     }
 
     /**
-     * Replicates all instance changes to peer eureka nodes except for
-     * replication traffic to this node.
-     *
+     * Replicates all instance changes to peer eureka nodes except for replication traffic to this node.
+     * 复制信息给除了自己之外的其他EurekaServer
      */
     private void replicateInstanceActionsToPeers(Action action, String appName,
                                                  String id, InstanceInfo info, InstanceStatus newStatus,
@@ -664,7 +663,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             InstanceInfo infoFromRegistry;
             CurrentRequestVersion.set(Version.V2);
             switch (action) {
-                case Cancel: //取消
+                case Cancel: //下架，取消
                     node.cancel(appName, id);
                     break;
                 case Heartbeat: //续约
@@ -676,10 +675,10 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                     node.register(info);
                     break;
                 case StatusUpdate: //修改状态
-                    infoFromRegistry = getInstanceByAppAndId(appName, id, false);
+                    infoFromRegistry = getInstanceByAppAndId(appName, id, false); //根据微服务名称和instanceId查找出InstanceInfo
                     node.statusUpdate(appName, id, newStatus, infoFromRegistry); //PeerEurekaNode.statusUpdate()
                     break;
-                case DeleteStatusOverride: //下线
+                case DeleteStatusOverride: //删除状态，下线
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.deleteStatusOverride(appName, id, infoFromRegistry);
                     break;
