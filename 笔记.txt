@@ -27,11 +27,13 @@
                 eurekaTransport.registrationClient.sendHeartBeat(instanceInfo.getAppName(), instanceInfo.getId(), instanceInfo, null);续约
                     AbstractJerseyEurekaHttpClient.java sendHeartBeat()
                         requestBuilder.put(ClientResponse.class); //提交put请求，进行续约
-
                 register(); //[第一次注册；] 如果返回续约状态状态码为404,则进行注册
 
-
      1.3.3 定时更新client信息给server（client端配置文件信息发生变化）
-
-
+            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds()); //启动定时任务更新client信息给server
+                scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务，一次性的；更新client信息给server；执行run()
+                run() // 更新client信息给server
+                
+            InstanceInfoReplicator.java  instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，按需更新client信息给server
+            
 

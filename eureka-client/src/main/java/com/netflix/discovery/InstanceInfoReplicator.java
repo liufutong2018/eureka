@@ -39,7 +39,7 @@ class InstanceInfoReplicator implements Runnable {
     private final RateLimiter rateLimiter;
     private final int burstSize;
     private final int allowedRatePerMinute;
-
+    // （InstanceInfo复制者； 就是复制配置文件里的信息）
     InstanceInfoReplicator(DiscoveryClient discoveryClient, InstanceInfo instanceInfo, int replicationIntervalSeconds, int burstSize) {
         this.discoveryClient = discoveryClient;
         this.instanceInfo = instanceInfo;
@@ -53,17 +53,18 @@ class InstanceInfoReplicator implements Runnable {
 
         this.started = new AtomicBoolean(false);
         this.rateLimiter = new RateLimiter(TimeUnit.MINUTES); //令牌桶限流
-        this.replicationIntervalSeconds = replicationIntervalSeconds;
+        this.replicationIntervalSeconds = replicationIntervalSeconds; //间隔
         this.burstSize = burstSize;
 
-        this.allowedRatePerMinute = 60 * this.burstSize / this.replicationIntervalSeconds; //
+        this.allowedRatePerMinute = 60 * this.burstSize / this.replicationIntervalSeconds; //允许每分钟的速率(4)
         logger.info("InstanceInfoReplicator onDemand update allowed rate per min is {}", allowedRatePerMinute);
     }
 
+    // 更新client信息给server
     public void start(int initialDelayMs) {
         if (started.compareAndSet(false, true)) {
-            instanceInfo.setIsDirty();  // 设置为true脏的； for initial register 
-            Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务
+            instanceInfo.setIsDirty();  // 设置为true脏的，表示还没更新到service； for initial register 
+            Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS); //启动任务，一次性的；更新client信息给server；执行run()
             scheduledPeriodicRef.set(next); //定时更新的时候，把此任务放进去
         }
     }
@@ -112,6 +113,7 @@ class InstanceInfoReplicator implements Runnable {
         }
     }
 
+    // 更新client信息给server
     public void run() {
         try {
             discoveryClient.refreshInstanceInfo(); //更新instanceInfo信息

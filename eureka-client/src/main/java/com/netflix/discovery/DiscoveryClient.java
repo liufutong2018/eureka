@@ -1348,7 +1348,7 @@ public class DiscoveryClient implements EurekaClient {
             scheduler.schedule(heartbeatTask, renewalIntervalInSecs, TimeUnit.SECONDS); //一次性的
 
             //==================第三个定时任务：定时更新client信息给server（client端配置文件信息发生变化）
-            // InstanceInfo replicator（InstanceInfo复制者）
+            // InstanceInfo replicator （InstanceInfo复制者； 就是复制配置文件里的信息）
             instanceInfoReplicator = new InstanceInfoReplicator(
                     this,
                     instanceInfo,
@@ -1364,15 +1364,15 @@ public class DiscoveryClient implements EurekaClient {
                 @Override
                 public void notify(StatusChangeEvent statusChangeEvent) {
                     logger.info("Saw local status change event {}", statusChangeEvent);
-                    instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，按需更新client信息给server
+                    instanceInfoReplicator.onDemandUpdate(); //配置文件发生变更时，[按需更新]client信息给server
                 }
             };
 
             if (clientConfig.shouldOnDemandUpdateStatusChange()) {
                 applicationInfoManager.registerStatusChangeListener(statusChangeListener);
             }
-
-            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds()); //启动定时任务更新client信息给server
+            //启动定时任务定时更新client信息给server
+            instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds());
         } else {
             logger.info("Not registering with Eureka server per configuration");
         }
