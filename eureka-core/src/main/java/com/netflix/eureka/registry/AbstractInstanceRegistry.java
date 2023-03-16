@@ -639,7 +639,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         int registrySizeThreshold = (int) (registrySize * serverConfig.getRenewalPercentThreshold());
         // 计算出可以清除的边界数
         int evictionLimit = registrySize - registrySizeThreshold;
-        // 获取要清除的client的数量 
+        // 获取要清除的client的数量 ；少删保证AP
         int toEvict = Math.min(expiredLeases.size(), evictionLimit);
         if (toEvict > 0) {
             logger.info("Evicting {} items (expired={}, evictionLimit={})", toEvict, expiredLeases.size(), evictionLimit);
