@@ -43,7 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A <em>jersey</em> resource that handles request related to a particular
+ * A <em>jersey</em> resource that handles request related to a particular；一个jersey资源，处理与特定Application的请求
  * {@link com.netflix.discovery.shared.Application}.
  *
  * @author Karthik Ranganathan, Greg Kim

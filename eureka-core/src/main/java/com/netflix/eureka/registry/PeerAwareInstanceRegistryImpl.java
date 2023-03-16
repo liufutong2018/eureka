@@ -395,7 +395,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     /**
      * Registers the information about the {@link InstanceInfo} and replicates
      * this information to all peer eureka nodes. If this is replication event
-     * from other replica nodes then it is not replicated. 注册
+     * from other replica nodes then it is not replicated. 处理Client的注册
      *
      * @param info
      *            the {@link InstanceInfo} to be registered and replicated.
@@ -405,7 +405,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      */
     @Override
     public void register(final InstanceInfo info, final boolean isReplication) {
-        int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS;
+        int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS; //90S
         if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
@@ -421,7 +421,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
         if (super.renew(appName, id, isReplication)) { //续约 AbstractInstanceRegistry.renew()
-            replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
+            replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication); //server间的复制
             return true;
         }
         return false;
@@ -481,10 +481,15 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
 
     @Override
     public boolean isLeaseExpirationEnabled() {
+        // 只要自我保护机制关闭了，cLient就会过期，直接返回true
         if (!isSelfPreservationModeEnabled()) {
             // The self preservation mode is disabled, hence allowing the instances to expire.
             return true;
         }
+        // 代码走到这里，说明自我保护机制是开启的。那么此时的client是否会过期就取决于下面的逻辑
+        // numberOfRenewsPerMinThreshold是开启client过期模式的阙值，是平均每分钟收到的续约数量。
+        // 若最后一分钟收到的续约数量大于这个值，说明现在的clent数量很多，不用考虑可用性问题，只要出现过期的client，直接干掉。
+        // 若小于这个阔值，则开启保护，为了保证可用性，出现过期client，也不将其从注册表中干掉。
         return numberOfRenewsPerMinThreshold > 0 && getNumOfRenewsInLastMin() > numberOfRenewsPerMinThreshold;
     }
 

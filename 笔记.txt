@@ -68,7 +68,7 @@ EurekaClient.java 源码
         PeerAwareInstanceRegistryImpl.java statusUpdate() 
             if (super.statusUpdate(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //缺失？
 
-            replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制
+            replicateToPeers(Action.StatusUpdate, appName, id, null, newStatus, isReplication); //server间的复制，做同步
                 replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node); //复制信息给除了自己之外的其他EurekaServer
                     node.statusUpdate(appName, id, newStatus, infoFromRegistry); //状态修改 
                         PeerEurekaNode.statusUpdate() replicationClient.statusUpdate(appName, id, newStatus, info); // server间的复制 
@@ -77,18 +77,61 @@ EurekaClient.java 源码
     1.3 deleteStatusUpdate() 处理客户端删除overridden状态请求；客户端提交了CANCEL_OVERRIDE状态请求，服务端在此处理
         registry.deleteStatusOverride() //进行删除 
             PeerAwareInstanceRegistryImpl.deleteStatusOverride()
-                if (super.deleteStatusOverride(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //删除 AbstractInstanceRegistry.deleteStatusOverride()
+                if (super.deleteStatusOverride(appName, id, newStatus, lastDirtyTimestamp, isReplication)) { //删除 
+                    AbstractInstanceRegistry.deleteStatusOverride()
                 replicateToPeers(Action.DeleteStatusOverride, appName, id, null, null, isReplication); //做同步 删除
 
+    1.4 renewLease() 续约；客户端是先续约404再注册
+        registry.renew(app.getName(), id, isFromReplicaNode); //续约 
+            跳转到：spring-cloud-netflix-eureka-server/src/main/java/org/springframework/cloud/netflix/eureka/server/InstanceRegistry.java
+                return super.renew(appName, serverId, isReplication);//续约
+                    跳转到：eureka/eureka-core/src/main/java/com/netflix/eureka/registry/PeerAwareInstanceRegistryImpl.java
+                        renew() 
+                            if (super.renew(appName, id, isReplication)) { //续约 AbstractInstanceRegistry.renew()
+                                this.getOverriddenInstanceStatus(instanceInfo, leaseToRenew, isReplication);//计算出当前client新的status的状态
+                            replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication); //做同步
+        response = this.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode); //验证时间一样不一样
+        registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus)); //续约时做同步 AbstractInstanceRegistry.java
+ 
+    1.5 addInstance() Server处理客户端注册请求  ApplicationResource.java 
+        registry.register(info, "true".equals(isReplication)); //注册
+            PeerAwareInstanceRegistryImpl.java  register() 处理Client的注册
+                super.register(info, leaseDuration, isReplication); //注册
+                    AbstractInstanceRegistry.java  register()处理Client的注册
+                        updateRenewsPerMinThreshold(); //更新续约的每分钟的阈值
+                        getOverriddenInstanceStatus(registrant, existingLease, isReplication); //计算状态
+                            getInstanceInfoOverrideRule(); //获取规则
+                            return rule.apply(r, existingLease, isReplication).status(); //应用
+                                FirstMatchWinsCompositeRule.java apply() 
+                                    this.rules[i].apply(instanceInfo, existingLease, isReplication);
+                                    P34 未完待续。。
 
+                replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication); //server间的复制
 
+    1.6 cancelLease() Server处理客户端下架请求 
+        boolean isSuccess = registry.cancel(app.getName(), id, "true".equals(isReplication)); //处理下架请求
+            AbstractInstanceRegistry.cancel().internalCancel() 处理下架请求
+            处理下架请求完成的主要任务：
+            *将该client从注册表中删除
+                将指定client的overriddenStatus从overriddenInstanceStatusMap删除
+                将本次操作记录到recentlyChangedQueue
+                修改注册表中该client的lastUpdatedTimestamp
 
+    1.7  () Server处理客户端全量下载请求 
 
+    1.8  () Server处理客户端增量下载请求 
 
+    1.9  () 定时清除过期Client 
+        PeerAwareInstanceRegistryImpl.java openForTraffic()
+            super.postInit(); -> AbstractInstanceRegistry.postInit()
+                EvictionTask.run() 
+                    long compensationTimeMs = getCompensationTimeMs();// 计算补偿时间 【关于补偿时间】
+                    evict(compensationTimeMs);// 开始清除
+                        if (!isLeaseExpirationEnabled()) {// 若注册表中的实例不会过期，则直接结束，不用清除[配置自我保护关闭就会过期]
 
+        清除方法解析
+ 
 
-
-
-
+ 
 
 
